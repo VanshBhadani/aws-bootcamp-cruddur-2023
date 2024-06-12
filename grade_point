@@ -1,0 +1,212 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_NAME_LENGTH 50
+
+// Structure for a student
+typedef struct StudentNode {
+    char name[MAX_NAME_LENGTH];
+    int id;
+    float *grades;
+    float gpa;
+    struct StudentNode *next;
+} StudentNode;
+
+// Structure for a course
+typedef struct {
+    char name[MAX_NAME_LENGTH];
+    int code;
+} Course;
+
+// Function prototypes
+void addStudent(StudentNode **head, int *numStudents);
+void addCourse(Course courses[], int *numCourses);
+void updateGrades(StudentNode *head, Course courses[], int numCourses);
+void displayStudents(StudentNode *head, Course courses[], int numCourses, int specificId);
+float calculateGPA(float *grades, int numCourses);
+
+int main() {
+    StudentNode *head = NULL;
+    Course courses[MAX_NAME_LENGTH];
+    int numStudents = 0;
+    int numCourses = 0;
+    char input[10];
+    int choice;
+    int specificId;
+
+    do {
+        printf("\nMenu:\n");
+        printf("1. Add student\n");
+        printf("2. Add course\n");
+        printf("3. Update grades\n");
+        printf("4. Display students\n");
+        printf("5. Exit\n");
+        printf("Enter your choice: ");
+        fgets(input, sizeof(input), stdin);
+        choice = atoi(strtok(input, " "));
+        char *idStr = strtok(NULL, " ");
+
+        switch (choice) {
+            case 1:
+                addStudent(&head, &numStudents);
+                break;
+            case 2:
+                addCourse(courses, &numCourses);
+                break;
+            case 3:
+                updateGrades(head, courses, numCourses);
+                break;
+            case 4:
+                if (idStr != NULL) {
+                    specificId = atoi(idStr);
+                    displayStudents(head, courses, numCourses, specificId);
+                } else {
+                    displayStudents(head, courses, numCourses, -1);
+                }
+                break;
+            case 5:
+                printf("Exiting program.\n");
+                break;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    } while (choice != 5);
+
+    // Free dynamically allocated memory
+    StudentNode *temp;
+    while (head != NULL) {
+        temp = head;
+        head = head->next;
+        free(temp->grades);
+        free(temp);
+    }
+
+    return 0;
+}
+
+// Function to add a student
+void addStudent(StudentNode **head, int *numStudents) {
+    StudentNode *newStudent = (StudentNode *)malloc(sizeof(StudentNode));
+    if (newStudent == NULL) {
+        printf("Memory allocation failed.\n");
+        return;
+    }
+
+    printf("Enter student name: ");
+    scanf("%s", newStudent->name);
+    getchar(); // Consume the newline character left in the input buffer
+    newStudent->id = ++(*numStudents);
+
+    // Initialize grades array to NULL
+    newStudent->grades = NULL;
+    newStudent->gpa = 0;
+
+    // Insert at the beginning of the linked list
+    newStudent->next = *head;
+    *head = newStudent;
+
+    printf("Student added successfully.\n");
+}
+
+// Function to add a course
+void addCourse(Course courses[], int *numCourses) {
+    printf("Enter course name: ");
+    scanf("%s", courses[*numCourses].name);
+    printf("Enter course code: ");
+    scanf("%d", &courses[*numCourses].code);
+    getchar(); // Consume the newline character left in the input buffer
+
+    (*numCourses)++;
+    printf("Course added successfully.\n");
+}
+
+// Function to update grades for a specific student
+void updateGrades(StudentNode *head, Course courses[], int numCourses) {
+    int studentId;
+    printf("Enter the student ID whose grades should be updated: ");
+    scanf("%d", &studentId);
+    getchar(); // Consume the newline character left in the input buffer
+
+    StudentNode *current = head;
+    while (current != NULL && current->id != studentId) {
+        current = current->next;
+    }
+
+    if (current == NULL) {
+        printf("Student with ID %d not found.\n", studentId);
+        return;
+    }
+
+    if (current->grades == NULL) {
+        current->grades = (float *)malloc(numCourses * sizeof(float));
+        if (current->grades == NULL) {
+            printf("Memory allocation failed.\n");
+            return;
+        }
+    }
+
+    printf("Enter grades for student %s (ID: %d):\n", current->name, current->id);
+    for (int i = 0; i < numCourses; i++) {
+        printf("Enter grade for %s: ", courses[i].name);
+        scanf("%f", &current->grades[i]);
+    }
+
+    // Calculate GPA
+    current->gpa = calculateGPA(current->grades, numCourses);
+
+    printf("Grades updated successfully.\n");
+}
+
+// Function to calculate GPA
+float calculateGPA(float *grades, int numCourses) {
+    float totalGradePoints = 0;
+    int totalCredits = 0;
+
+    for (int i = 0; i < numCourses; i++) {
+        // Assuming all courses have equal credits (e.g., 3 credits each)
+        totalGradePoints += grades[i] * 3; // Change 3 to the actual credits of the course
+        totalCredits += 3; // Change 3 to the actual credits of the course
+    }
+
+    return totalGradePoints / totalCredits;
+}
+
+// Function to display all students (ID and name only) or a specific student with details
+void displayStudents(StudentNode *head, Course courses[], int numCourses, int specificId) {
+    if (head == NULL) {
+        printf("No students found.\n");
+        return;
+    }
+
+    StudentNode *current = head;
+    if (specificId == -1) {
+        // Display all students
+        printf("Students:\n");
+        while (current != NULL) {
+            printf("ID: %d\n", current->id);
+            printf("Name: %s\n", current->name);
+            printf("\n");
+            current = current->next;
+        }
+    } else {
+        // Display specific student
+        while (current != NULL && current->id != specificId) {
+            current = current->next;
+        }
+
+        if (current == NULL) {
+            printf("Student with ID %d not found.\n", specificId);
+            return;
+        }
+
+        printf("ID: %d\n", current->id);
+        printf("Name: %s\n", current->name);
+        printf("GPA: %.2f\n", current->gpa);
+        printf("Grades:\n");
+        for (int i = 0; i < numCourses; i++) {
+            printf("%s: %.2f\n", courses[i].name, current->grades[i]);
+        }
+        printf("\n");
+    }
+}
